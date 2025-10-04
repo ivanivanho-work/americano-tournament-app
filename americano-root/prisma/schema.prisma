@@ -1,0 +1,102 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tournament {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  pointsPerMatch Int    @default(24)
+  status      TournamentStatus @default(DRAFT)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  players     Player[]
+  rounds      Round[]
+  matches     Match[]
+
+  @@map("tournaments")
+}
+
+model Player {
+  id           String @id @default(cuid())
+  name         String
+  email        String?
+  totalPoints  Int    @default(0)
+  tournamentId String
+
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  matchesAsPlayer1 Match[] @relation("Player1Matches")
+  matchesAsPlayer2 Match[] @relation("Player2Matches")
+  matchesAsPlayer3 Match[] @relation("Player3Matches")
+  matchesAsPlayer4 Match[] @relation("Player4Matches")
+
+  @@unique([email, tournamentId])
+  @@map("players")
+}
+
+model Round {
+  id           String @id @default(cuid())
+  roundNumber  Int
+  tournamentId String
+  status       RoundStatus @default(PENDING)
+
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  matches      Match[]
+
+  @@unique([roundNumber, tournamentId])
+  @@map("rounds")
+}
+
+model Match {
+  id           String @id @default(cuid())
+  courtNumber  Int?
+  team1Score   Int?
+  team2Score   Int?
+  status       MatchStatus @default(PENDING)
+
+  tournamentId String
+  roundId      String
+  player1Id    String
+  player2Id    String
+  player3Id    String
+  player4Id    String
+
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  round        Round @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  player1      Player @relation("Player1Matches", fields: [player1Id], references: [id])
+  player2      Player @relation("Player2Matches", fields: [player2Id], references: [id])
+  player3      Player @relation("Player3Matches", fields: [player3Id], references: [id])
+  player4      Player @relation("Player4Matches", fields: [player4Id], references: [id])
+
+  @@map("matches")
+}
+
+enum TournamentStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+}
+
+enum RoundStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum MatchStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
